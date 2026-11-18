@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_all, collect_data_files, copy_metadata
 asr_data, asr_bins, asr_hidden = collect_all('onnx_asr')
 a = Analysis(['launcher.py'], pathex=['.'], binaries=asr_bins,
-    datas=asr_data + [('translations.json', '.')] + collect_data_files('faster_whisper') + copy_metadata('onnx-asr'),
+    datas=asr_data + [('translations.json', '.'), ('assets/check.svg', 'assets'), ('assets/caret.svg', 'assets')] + collect_data_files('faster_whisper') + copy_metadata('onnx-asr'),
     hiddenimports=asr_hidden + ['pipeline_worker', 'app', 'language_dialog', 'onnxruntime.capi.onnxruntime_pybind11_state'],
     excludes=['tkinter', 'matplotlib', 'scipy', 'IPython', 'pytest', 'torch'], noarchive=False)
 # Qt uses the Windows ICU API. A similarly named third-party DLL on the

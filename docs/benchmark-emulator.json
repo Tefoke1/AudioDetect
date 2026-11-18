@@ -1,0 +1,60 @@
+{
+  "device": "Android SDK built for x86_64",
+  "abi": "x86_64",
+  "cores": 4,
+  "syntheticOnly": true,
+  "runs": [
+    {
+      "language": "ru",
+      "modelLoadMs": 1161,
+      "audioSeconds": 67.940625,
+      "baselineMs": [
+        6682,
+        6619,
+        6492
+      ],
+      "optimizedMs": [
+        6644,
+        7199,
+        7057
+      ],
+      "recognitionMs": [
+        2481,
+        2575,
+        2573
+      ],
+      "optimizedPairMs": [
+        7844,
+        8062,
+        7630
+      ],
+      "sameWords": true
+    },
+    {
+      "language": "en",
+      "modelLoadMs": 546,
+      "audioSeconds": 56.24126984126984,
+      "baselineMs": [
+        7365,
+        7130,
+        7078
+      ],
+      "optimizedMs": [
+        7924,
+        7660,
+        7657
+      ],
+      "recognitionMs": [
+        2597,
+        2555,
+        2624
+      ],
+      "optimizedPairMs": [
+        8416,
+        8492,
+        8482
+      ],
+      "sameWords": true
+    }
+  ]
+}

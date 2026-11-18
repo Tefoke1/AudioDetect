@@ -23,6 +23,8 @@ Windows interface with fictional example text.
 
 Windows builds are not Authenticode-signed. Android releases use a dedicated project signing key. Verify downloads against the release `SHA256SUMS.txt`.
 
+**Three steps:** 1. Check recordings → 2. Enter a query → 3. Listen to matches or save the table. Each step provides guidance and examples.
+
 ## Find what matters
 
 | Task | How it works |
@@ -48,7 +50,7 @@ flowchart LR
     E --> G[Optional Windows discussion analysis]
 ```
 
-Windows uses GigaAM CTC through ONNX Runtime, with DirectML acceleration and an int8 CPU fallback; Whisper is an alternative. Overlapping audio windows bound inference work and preserve boundary words. A separate worker process makes cancellation independent of the current inference call. Android uses Vosk and streams decoded PCM through one recognizer at a time in a foreground service. Its separate process can be stopped immediately.
+Windows uses GigaAM CTC through ONNX Runtime, with DirectML acceleration and an int8 CPU fallback; Whisper is an alternative. Overlapping audio windows bound inference work and preserve boundary words. A separate worker process makes cancellation independent of the current inference call. Android uses Vosk in a separate foreground process, processing up to two recordings concurrently and reducing concurrency under thermal, battery or memory pressure. Cached queries skip model loading; Stop terminates the recognition process.
 
 Transcripts are reused for later queries. Discussion analysis runs only on chosen matches, using a local Qwen model through llama.cpp. The optional model download is about 2.5 GB. Briefs quote the source; generated boundaries are checked against source utterances. Speed depends on **audio duration**, model, device, codec and speech quality—not only file size. There is no universal 500-file timing guarantee.
 
@@ -70,6 +72,6 @@ Transcripts are reused for later queries. Discussion analysis runs only on chose
 | Android | `android/app/src/main/java/org/audiodetect/app/` |
 | Build and verification | `tools/`, `*.spec`, `test_*.py`, Android unit tests |
 
-[Build from source](docs/BUILD.md) · [Third-party components](THIRD_PARTY.md) · [Release checks](docs/RELEASING.md)
+[Performance and phone testing](docs/PERFORMANCE.md) · [Interface system](docs/DESIGN.md) · [Build from source](docs/BUILD.md) · [Third-party components](THIRD_PARTY.md) · [Release checks](docs/RELEASING.md)
 
 AudioDetect code is licensed under **GNU GPL version 3**. Distributed derivative applications must comply with GPLv3, including its source-distribution requirements. Libraries and model weights retain their own licenses.

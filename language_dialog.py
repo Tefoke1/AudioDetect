@@ -8,10 +8,15 @@ def choose_language(data_dir):
     dialog = QDialog()
     dialog.setWindowTitle('AudioDetect')
     dialog.setMinimumWidth(420)
-    dialog.setStyleSheet('QDialog {background:#174b58;color:white} QLabel {color:white;font-size:18px} QPushButton {padding:16px;font-size:16px;background:#f4f7f9;border:0;border-radius:5px}')
+    from desktop_theme import STYLE, apply_palette
+    from PySide6.QtWidgets import QApplication
+    apply_palette(QApplication.instance())
+    dialog.setStyleSheet(STYLE)
     layout = QVBoxLayout(dialog)
     layout.setContentsMargins(28, 24, 28, 24)
-    layout.addWidget(QLabel('AudioDetect'))
+    title = QLabel('AudioDetect')
+    title.setObjectName('title')
+    layout.addWidget(title)
     layout.addWidget(QLabel('Выберите язык / Choose your language'))
     buttons = QHBoxLayout()
     result = []
@@ -21,6 +26,9 @@ def choose_language(data_dir):
         dialog.accept()
     for code, text in [('ru', 'Русский'), ('en', 'English')]:
         button = QPushButton(text)
+        button.setMinimumHeight(52)
+        if code == saved:
+            button.setObjectName("primary")
         button.clicked.connect(lambda checked=False, code=code: select(code))
         button.setDefault(code == saved)
         buttons.addWidget(button)

@@ -33,39 +33,8 @@ from process_control import stop_process_tree
 from runtime_paths import application_dir, worker_command
 BASE = application_dir()
 STATES = {'pending': tr('Не проверен'), 'ready': tr('Готово'), 'running': tr('Распознаётся'), 'error': tr('Ошибка')}
-STYLE = '''
-QMainWindow, QWidget { background: #f4f7f9; color: #243a4a; font-family: "Segoe UI"; font-size: 14px; }
-QWidget#header { background: #174b58; }
-QWidget#header QLabel { background: transparent; color: white; }
-QLabel#title { font-size: 25px; font-weight: 650; }
-QLabel#subtitle { color: #c8e1e4; font-size: 13px; }
-QLabel#section { font-size: 17px; font-weight: 600; }
-QLabel#muted { color: #59707e; font-size: 13px; }
-QLineEdit, QComboBox { background: white; border: 1px solid #bdccd4; border-radius: 5px; padding: 9px; }
-QLineEdit:focus, QComboBox:focus { border: 2px solid #168490; padding: 8px; }
-QPushButton { background: white; border: 1px solid #bdccd4; border-radius: 5px; padding: 9px 12px; }
-QPushButton:hover { background: #e5f1f3; border-color: #137580; }
-QPushButton:pressed { background: #cce3e7; }
-QPushButton:disabled { color: #96a4ad; background: #edf1f4; border-color: #dae1e5; }
-QPushButton#primary { background: #0b6970; color: white; border-color: #0b6970; font-weight: 600; }
-QPushButton#primary:hover { background: #08545a; }
-QPushButton#primary:disabled { background: #9ebabb; border-color: #9ebabb; }
-QTableWidget, QTextBrowser { background: white; border: 1px solid #d3dfe5; border-radius: 5px; }
-QTableWidget::item:selected { background: #dceff2; color: #163f4b; }
-QHeaderView::section { background: #eaf0f4; padding: 8px; border: 0; border-bottom: 1px solid #cbd8e0; font-weight: 600; }
-QTableWidget { gridline-color: #edf1f4; }
-QTableWidget::item { padding: 7px; }
-QProgressBar { border: 0; border-radius: 3px; background: #dfe8ed; min-height: 7px; max-height: 7px; }
-QProgressBar::chunk { background: #168490; border-radius: 3px; }
-QCheckBox { spacing: 7px; }
-QSplitter::handle { background: #e1e9ee; }
-QToolTip { background: #243a4a; color: white; padding: 7px; border: 0; }
-QTabWidget::pane { border: 0; }
-QTabBar::tab { background: #e5edf1; padding: 13px 24px; border-bottom: 3px solid transparent; }
-QTabBar::tab:selected { background: #f4f7f9; border-bottom-color: #0b6970; font-weight: 600; }
-QDateEdit, QDoubleSpinBox { background: white; border: 1px solid #bdccd4; border-radius: 4px; padding: 7px; }
-QDateEdit:disabled, QDoubleSpinBox:disabled { background: #eaf0f4; color: #7d8e98; }
-'''
+from desktop_theme import STYLE, apply_palette, lift
+
 
 
 class Worker(QThread):
@@ -221,18 +190,20 @@ class Window(QMainWindow):
         self.result_filter_description = None
         self._refreshing_catalog = False
         self.setWindowTitle('AudioDetect')
-        self.resize(1280, 940)
-        self.setMinimumSize(1000, 840)
+        self.resize(1280, 850)
+        self.setMinimumSize(980, 720)
         self.setStyleSheet(STYLE)
+        apply_palette(QApplication.instance())
         pixmap = QPixmap(48, 48)
-        pixmap.fill(QColor('#174b58'))
+        pixmap.fill(QColor('#203d3f'))
         painter = QPainter(pixmap)
-        painter.setPen(QColor('white'))
+        painter.setPen(QColor('#ff9f8f'))
         for x, height in [(12, 12), (20, 26), (28, 34), (36, 18)]:
             painter.drawLine(x, 24 - height // 2, x, 24 + height // 2)
         painter.end()
         self.setWindowIcon(QIcon(pixmap))
         root = QWidget()
+        root.setObjectName('workspace')
         self.setCentralWidget(root)
         outer = QVBoxLayout(root)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -240,7 +211,7 @@ class Window(QMainWindow):
         header = QWidget()
         header.setObjectName('header')
         h = QHBoxLayout(header)
-        h.setContentsMargins(26, 18, 26, 18)
+        h.setContentsMargins(28, 20, 28, 20)
         titles = QVBoxLayout()
         titles.addWidget(label('AudioDetect', 'title'))
         titles.addWidget(label(tr('Поиск слов, фраз и обсуждений в телефонных записях'), 'subtitle'))
@@ -251,7 +222,7 @@ class Window(QMainWindow):
         self.tabs = QTabWidget()
         outer.addWidget(self.tabs, 1)
         self.selector = FileCatalog(self.store, self.db, self.settings.get('catalog', {'folder': self.settings.get('folder', '')}))
-        self.tabs.addTab(self.selector, tr('1. Выбор записей'))
+        self.tabs.addTab(self.selector, tr('1. Записи'))
         right = QWidget()
         main = QVBoxLayout(right)
         main.setContentsMargins(24, 16, 24, 18)
@@ -260,16 +231,19 @@ class Window(QMainWindow):
         self.selection_info = label('', 'muted')
         scope_line.addWidget(self.selection_info, 1)
         scope_line.addWidget(button(tr('Изменить выбор файлов'), lambda: self.tabs.setCurrentIndex(0)))
-        scope_line.addWidget(label(tr('Качество речи:'), 'muted'))
+        scope_line.addWidget(label(tr('Распознавание:'), 'muted'))
         self.model = QComboBox()
-        self.model.addItem(tr('Быстрый русский · Radeon + CPU'), 'gigaam-v3-ctc')
-        self.model.addItem('Whisper small · CPU', 'small')
-        self.model.addItem(tr('Whisper medium · CPU, медленно'), 'medium')
-        self.model.addItem('Whisper base · CPU', 'base')
+        self.model.addItem(tr('Русская речь · быстро'), 'gigaam-v3-ctc')
+        self.model.addItem(tr('Другие языки · стандарт'), 'small')
+        self.model.addItem(tr('Другие языки · точнее, медленнее'), 'medium')
+        self.model.addItem(tr('Другие языки · быстрее'), 'base')
         selected_model = self.settings.get('model', 'gigaam-v3-ctc') if self.settings.get('engine_version', 0) >= 3 else 'gigaam-v3-ctc'
         self.model.setCurrentIndex(max(0, self.model.findData(selected_model)))
         scope_line.addWidget(self.model)
         main.addLayout(scope_line)
+        main.addWidget(label(tr('Найдите нужный разговор'), 'pageTitle'))
+        main.addWidget(label(tr('Введите тему, слова из разговора или адрес. Мы покажем записи и точное место, где встретился запрос.'), 'heroText'))
+        main.addSpacing(16)
         main.addWidget(label(tr('Что найти в разговорах?'), 'section'))
         query_row = QHBoxLayout()
         self.query = QLineEdit(self.settings.get('query', ''))
@@ -278,7 +252,8 @@ class Window(QMainWindow):
         self.query.returnPressed.connect(self.start)
         query_row.addWidget(self.query, 1)
         self.start_button = button(tr('Проверить выбранные'), self.start, True)
-        query_row.addWidget(self.start_button)
+        self.start_button.setMinimumHeight(48)
+        lift(self.start_button, True)
         main.addLayout(query_row)
         options = QHBoxLayout()
         self.search_mode = QComboBox()
@@ -300,16 +275,43 @@ class Window(QMainWindow):
         options.addWidget(self.fuzzy)
         options.addStretch()
         self.search_button = button(tr('Подробности выбранных записей'), self.start_details)
-        options.addWidget(self.search_button)
+
         main.addLayout(options)
         self.query_hint = label('', 'muted')
         main.addWidget(self.query_hint)
 
+        main.addSpacing(16)
+        example_panel = QWidget()
+        example_panel.setObjectName('panel')
+        examples = QVBoxLayout(example_panel)
+        examples.setContentsMargins(22, 18, 22, 18)
+        examples.addWidget(label(tr('Как сформулировать запрос'), 'section'))
+        examples.addWidget(label(tr('«договор оплата» — найдёт разговор с обоими словами. «согласование сметы» — найдёт фразу целиком.'), 'muted'))
+        example_actions = QHBoxLayout()
+        example_actions.addWidget(button(tr('Пример: ключевые слова'), lambda: self.use_example(True)))
+        example_actions.addWidget(button(tr('Пример: фраза'), lambda: self.use_example(False)))
+        example_actions.addStretch()
+        examples.addLayout(example_actions)
+        main.addWidget(example_panel)
+        main.addStretch(1)
+        main.addWidget(label(tr('Новые записи распознаются один раз. Повторный поиск использует готовый текст. Всё хранится на вашем компьютере.'), 'muted'))
+        query_footer = QHBoxLayout()
+        query_footer.addWidget(button(tr('Назад к записям'), lambda: self.tabs.setCurrentIndex(0)))
+        query_footer.addStretch()
+        query_footer.addWidget(self.start_button)
+        main.addLayout(query_footer)
+        self.tabs.addTab(right, tr('2. Запрос'))
+        result_page = QWidget()
+        main = QVBoxLayout(result_page)
+        main.setContentsMargins(24, 16, 24, 18)
+        main.setSpacing(10)
         status_row = QHBoxLayout()
         self.status = label(tr('Выберите файлы на первой вкладке, введите запрос и нажмите «Проверить выбранные».'), 'muted')
         status_row.addWidget(self.status, 1)
         self.stop_button = button(tr('Остановить'), self.stop)
         self.stop_button.setEnabled(False)
+        self.stop_button.hide()
+        self.stop_button.setObjectName('danger')
         status_row.addWidget(self.stop_button)
         main.addLayout(status_row)
         self.progress_bar = QProgressBar()
@@ -328,7 +330,7 @@ class Window(QMainWindow):
         main.addWidget(self.results_note)
         self.result_scope_note = label('', 'muted')
         self.result_scope_note.setTextFormat(Qt.TextFormat.PlainText)
-        self.result_scope_note.setStyleSheet('color: #354f60; background: #e8eff3; padding: 7px; border-radius: 4px;')
+        self.result_scope_note.setStyleSheet('color:#b8c9c1;background:#203d3f;padding:8px;border-radius:6px;')
         main.addWidget(self.result_scope_note)
         self.vertical = QSplitter(Qt.Orientation.Vertical)
         self.table = QTableWidget(0, 4)
@@ -345,6 +347,7 @@ class Window(QMainWindow):
         self.table.setColumnWidth(1, 125)
         self.table.itemSelectionChanged.connect(self.select_match)
         self.table.cellDoubleClicked.connect(lambda *_: (self.show_text_button.setChecked(True), self.play()))
+        self.table.setAlternatingRowColors(True)
         self.vertical.addWidget(self.table)
         details = QWidget()
         detail_layout = QVBoxLayout(details)
@@ -358,7 +361,7 @@ class Window(QMainWindow):
         self.transcript.setMinimumHeight(60)
         self.transcript.setOpenLinks(False)
         self.transcript.anchorClicked.connect(self.jump_audio)
-        self.transcript.setHtml(tr('<p style="color:#59707e">Выберите найденный фрагмент: здесь откроется разговор целиком. Нажмите время в тексте, чтобы прослушать это место.</p>'))
+        self.transcript.setHtml(tr('<p style="color:#b8c9c1">Выберите найденный фрагмент: здесь откроется разговор целиком. Нажмите время в тексте, чтобы прослушать это место.</p>'))
         detail_layout.addWidget(self.transcript, 1)
         actions = QHBoxLayout()
         self.play_button = button(tr('Слушать фрагмент'), self.play)
@@ -377,15 +380,30 @@ class Window(QMainWindow):
         self.show_text_button.toggled.connect(lambda visible: self.table.setVisible(not visible))
         self.show_text_button.toggled.connect(lambda visible: self.show_text_button.setText(
             tr('К списку результатов') if visible else tr('Текст и прослушивание ▾')))
+        self.empty_state = QWidget()
+        self.empty_state.setObjectName('panel')
+        empty_layout = QVBoxLayout(self.empty_state)
+        empty_layout.setContentsMargins(32, 30, 32, 30)
+        empty_layout.addStretch()
+        empty_layout.addWidget(label(tr('Здесь появится нужный разговор'), 'pageTitle'))
+        self.empty_text = label(tr('Выберите записи, задайте запрос и начните поиск. Каждый результат можно открыть и прослушать с нужной секунды.'), 'heroText')
+        empty_layout.addWidget(self.empty_text)
+        self.empty_action = button(tr('Перейти к запросу'), lambda: self.tabs.setCurrentIndex(1), True)
+        empty_layout.addWidget(self.empty_action, 0, Qt.AlignmentFlag.AlignLeft)
+        empty_layout.addStretch()
+        main.addWidget(self.empty_state, 1)
         main.addWidget(self.vertical, 1)
         export_row = QHBoxLayout()
-        self.copy_button = button(tr('Скопировать найденные записи…'), self.copy_matches, True)
+        self.copy_button = button(tr('Скопировать найденные записи…'), self.copy_matches)
         self.csv_button = button(tr('Сохранить таблицу CSV…'), self.export_matches)
-        export_row.addWidget(self.copy_button, 1)
+        export_row.addWidget(button(tr('Изменить запрос'), lambda: self.tabs.setCurrentIndex(1)))
+        export_row.addWidget(self.search_button)
+        export_row.addStretch()
+        export_row.addWidget(self.copy_button)
         export_row.addWidget(self.csv_button)
         main.addLayout(export_row)
         main.addWidget(label(tr('Описание и границы обсуждения определяются автоматически. Проверьте важные выводы по тексту или записи.'), 'muted'))
-        self.tabs.addTab(right, tr('2. Поиск и результаты'))
+        self.tabs.addTab(result_page, tr('3. Результаты'))
         self.selector.selectionChanged.connect(self.selection_changed)
         self.selector.openRecording.connect(self.open_catalog_recording)
         self.selector.continueRequested.connect(lambda: self.tabs.setCurrentIndex(1))
@@ -406,6 +424,11 @@ class Window(QMainWindow):
         self.keyword_rule.currentIndexChanged.connect(self.search_options_changed)
         self.update_search_hint()
 
+    def use_example(self, keywords):
+        self.search_mode.setCurrentIndex(1 if keywords else 0)
+        self.query.setText(tr('договор оплата') if keywords else tr('согласование сметы'))
+        self.query.setFocus()
+
     def update_search_hint(self):
         keywords = self.search_mode.currentData() == 'keywords'
         self.keyword_rule.setVisible(keywords)
@@ -425,6 +448,7 @@ class Window(QMainWindow):
     def query_changed(self):
         self.copy_button.setEnabled(False)
         self.csv_button.setEnabled(False)
+        self.start_button.setEnabled(bool(self.query.text().strip()) and bool(self.selector.active_ids()))
         self.search_timer.start()
 
     def remember(self):
@@ -447,7 +471,8 @@ class Window(QMainWindow):
     def update_selection_info(self):
         rows = self.store.rows(self.selector.active_ids())
         self.selection_info.setText(tr('Файлов к следующей проверке: {0} · {1}', len(rows), display_size(sum((r['size'] for r in rows)))))
-        self.start_button.setText(tr('Проверить выбранные ({0})', len(rows)))
+        self.start_button.setText(tr('Начать поиск ({0})', len(rows)))
+        self.start_button.setEnabled(bool(rows) and bool(self.query.text().strip()) and not (self.worker and self.worker.isRunning()))
 
     def selection_changed(self):
         self.update_selection_info()
@@ -469,7 +494,9 @@ class Window(QMainWindow):
             self.selector.refresh()
 
     def open_catalog_recording(self, rid):
-        self.tabs.setCurrentIndex(1)
+        self.tabs.setCurrentIndex(2)
+        self.empty_state.hide()
+        self.vertical.show()
         self.show_transcript(rid)
         self.show_text_button.setChecked(True)
 
@@ -486,6 +513,10 @@ class Window(QMainWindow):
                   self.search_button, self.query, self.fuzzy, self.search_mode, self.keyword_rule]:
             w.setEnabled(not active)
         self.stop_button.setEnabled(active)
+        self.stop_button.setVisible(active)
+        self.empty_action.setVisible(not active)
+        self.search_button.setEnabled(not active and bool(self.matches))
+        self.start_button.setEnabled(not active and bool(self.query.text().strip()) and bool(self.selector.active_ids()))
 
     def start_details(self):
         indexes = self.table.selectionModel().selectedRows()
@@ -514,10 +545,12 @@ class Window(QMainWindow):
         if work_ids is None or self.result_filter_description is None:
             self.result_filter_description = self.selector.criteria().description()
         self.result_ids = frozenset(self.current_ids() if work_ids is not None else selected_ids)
-        self.tabs.setCurrentIndex(1)
+        self.tabs.setCurrentIndex(2)
         self.remember()
         self.busy(True)
         self.progress_bar.setRange(0, 0)
+        self.empty_text.setText(tr('Идёт проверка. Найденные фрагменты будут появляться здесь. Можно остановить работу и продолжить позже.'))
+        self.empty_action.setVisible(False)
         self.status.setText(tr('Подготовка распознавания…'))
         self.worker = Worker(self.db, self.data / 'models', self.model.currentData(),
                              self.query.text().strip(), self.fuzzy.isChecked(), analysis_only,
@@ -612,6 +645,14 @@ class Window(QMainWindow):
         else:
             result_message = tr('Совпадений по запросу в выбранных записях нет.')
         self.results_note.setText(tr('{0}: {1} файлов; распознано: {2}. ', scope_title, len(rows), ready) + result_message)
+        self.empty_state.setVisible(not self.matches)
+        self.vertical.setVisible(bool(self.matches))
+        if not self.matches:
+            self.empty_text.setText(result_message)
+        active = bool(self.worker and self.worker.isRunning())
+        self.empty_action.setVisible(not active)
+        self.show_text_button.setEnabled(bool(self.matches))
+        self.search_button.setEnabled(bool(self.matches) and not active)
         self.copy_button.setEnabled(bool(self.matches))
         pending = any(m.analysis_state == 'pending' for m in self.matches)
         self.csv_button.setEnabled(bool(self.matches))
@@ -650,13 +691,13 @@ class Window(QMainWindow):
         for i, s in enumerate(self.store.segments(rid)):
             highlight = match and match.first_segment <= i <= match.last_segment
             text = html.escape(s.text)
-            marker = '<span style="color:#9a6418">[?] </span>' if s.uncertain else ''
-            bg = 'background-color:#ddf0ee;' if highlight else ''
+            marker = '<span style="color:#f2c88c">[?] </span>' if s.uncertain else ''
+            bg = 'background-color:#466563;' if highlight else ''
             chunks.append(f'<p id="s{i}" style="{bg}margin:8px 0;padding:5px;">'
-                          f'<a href="seek:{s.start}" style="color:#0b6970;text-decoration:none;">{timecode(s.start)}</a>'
+                          f'<a href="seek:{s.start}" style="color:#ffb4a4;text-decoration:none;">{timecode(s.start)}</a>'
                           f' &nbsp; {marker}{text}</p>')
         excerpt = (tr('<p><b>Выбранное обсуждение:</b> ') + html.escape(match.text) + '</p><hr>') if match else ''
-        self.transcript.setHtml('<body style="font-family:Segoe UI;font-size:14px;">' + excerpt +
+        self.transcript.setHtml('<body style="font-family:Segoe UI;font-size:15px;color:#f1f2e0;">' + excerpt +
                                 (''.join(chunks) or tr('<p>Речь не обнаружена.</p>')) + '</body>')
         self.transcript.moveCursor(QTextCursor.MoveOperation.Start)
 
